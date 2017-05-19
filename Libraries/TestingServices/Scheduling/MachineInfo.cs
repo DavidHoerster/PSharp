@@ -12,9 +12,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System.Collections.Generic;
-using System.Threading.Tasks;
-
 namespace Microsoft.PSharp.TestingServices.Scheduling
 {
     /// <summary>
@@ -30,9 +27,14 @@ namespace Microsoft.PSharp.TestingServices.Scheduling
         internal AbstractMachine Machine;
 
         /// <summary>
-        /// Task id of the machine.
+        /// Unique id of the machine.
         /// </summary>
         public readonly int Id;
+
+        /// <summary>
+        /// Task id of the machine.
+        /// </summary>
+        public readonly int TaskId;
 
         /// <summary>
         /// Is machine enabled.
@@ -74,6 +76,30 @@ namespace Microsoft.PSharp.TestingServices.Scheduling
             get; internal set;
         }
 
+        /// <summary>
+        /// Type of the next operation of the machine.
+        /// </summary>
+        public OperationType NextOperationType
+        {
+            get; internal set;
+        }
+
+        /// <summary>
+        /// Target id of the next operation of the machine.
+        /// </summary>
+        public int NextTargetId
+        {
+            get; internal set;
+        }
+
+        /// <summary>
+        /// Monotonically increasing operation count.
+        /// </summary>
+        public int OperationCount
+        {
+            get; internal set;
+        }
+
         #endregion
 
         #region constructors
@@ -81,17 +107,22 @@ namespace Microsoft.PSharp.TestingServices.Scheduling
         /// <summary>
         /// Constructor.
         /// </summary>
-        /// <param name="id">TaskId</param>
+        /// <param name="id">Unique id</param>
+        /// <param name="taskId">TaskId</param>
         /// <param name="machine">Machine</param>
-        internal MachineInfo(int id, AbstractMachine machine)
+        internal MachineInfo(int id, int taskId, AbstractMachine machine)
         {
             this.Id = id;
+            this.TaskId = taskId;
             this.Machine = machine;
             this.IsEnabled = true;
             this.IsWaitingToReceive = false;
             this.IsActive = false;
             this.HasStarted = false;
             this.IsCompleted = false;
+            this.NextOperationType = OperationType.Start;
+            this.NextTargetId = id;
+            this.OperationCount = 0;
         }
 
         #endregion
@@ -135,7 +166,7 @@ namespace Microsoft.PSharp.TestingServices.Scheduling
         /// <returns>string</returns>
         public override string ToString()
         {
-            var text = $"Task {this.Id} of machine {this.Machine.Id}::" +
+            var text = $"Task {this.TaskId} of machine {this.Machine.Id}::" +
                 $"enabled[{this.IsEnabled}], waiting[{this.IsWaitingToReceive}], " +
                 $"active[{this.IsActive}], started[{this.HasStarted}], " +
                 $"completed[{this.IsCompleted}]";

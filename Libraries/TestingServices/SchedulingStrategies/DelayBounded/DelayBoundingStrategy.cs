@@ -101,16 +101,11 @@ namespace Microsoft.PSharp.TestingServices.Scheduling
                 orderedMachines.AddRange(machines.GetRange(0, currentMachineIdx));
             }
 
-            var availableMachines = orderedMachines.Where(
-                mi => mi.IsEnabled && !mi.IsWaitingToReceive).ToList();
+            var availableMachines = orderedMachines.Where(mi => mi.IsEnabled).ToList();
             if (availableMachines.Count == 0)
             {
-                availableMachines = choices.Where(m => m.IsWaitingToReceive).ToList();
-                if (availableMachines.Count == 0)
-                {
-                    next = null;
-                    return false;
-                }
+                next = null;
+                return false;
             }
 
             int idx = 0;

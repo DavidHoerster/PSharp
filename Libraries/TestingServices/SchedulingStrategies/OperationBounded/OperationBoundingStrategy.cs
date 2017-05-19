@@ -91,16 +91,11 @@ namespace Microsoft.PSharp.TestingServices.Scheduling
                 Debug.WriteLine("<OperationDebug> Removes operation '{0}'.", current.Machine.OperationId);
             }
 
-            var availableMachines = choices.Where(
-                mi => mi.IsEnabled && !mi.IsWaitingToReceive).ToList();
+            var availableMachines = choices.Where(mi => mi.IsEnabled).ToList();
             if (availableMachines.Count == 0)
             {
-                availableMachines = choices.Where(m => m.IsWaitingToReceive).ToList();
-                if (availableMachines.Count == 0)
-                {
-                    next = null;
-                    return false;
-                }
+                next = null;
+                return false;
             }
 
             this.TryRegisterNewOperations(availableMachines, current);

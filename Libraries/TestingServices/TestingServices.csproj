@@ -82,6 +82,7 @@
     <Compile Include="SchedulingStrategies\Special\InteractiveStrategy.cs" />
     <Compile Include="SchedulingStrategies\Special\MaceMCStrategy.cs" />
     <Compile Include="SchedulingStrategies\Special\ReplayStrategy.cs" />
+    <Compile Include="Scheduling\OperationType.cs" />
     <Compile Include="StateCaching\Fingerprint.cs" />
     <Compile Include="StateCaching\MonitorStatus.cs" />
     <Compile Include="StateCaching\State.cs" />

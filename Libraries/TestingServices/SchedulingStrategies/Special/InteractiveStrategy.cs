@@ -89,8 +89,7 @@ namespace Microsoft.PSharp.TestingServices.Scheduling
             else
             {
                 choices = choices.OrderBy(machine => machine.Machine.Id.Value).ToList();
-                availableMachines = choices.Where(
-                    m => m.IsEnabled && !m.IsWaitingToReceive).ToList();
+                availableMachines = choices.Where(m => m.IsEnabled).ToList();
             }
             
             if (availableMachines.Count == 0)
@@ -466,8 +465,7 @@ namespace Microsoft.PSharp.TestingServices.Scheduling
                 }
             }
 
-            prioritizedMachines = prioritizedMachines.Where(
-                mi => mi.IsEnabled && !mi.IsWaitingToReceive).ToList();
+            prioritizedMachines = prioritizedMachines.Where(mi => mi.IsEnabled).ToList();
             if (prioritizedMachines.Count == 0)
             {
                 return prioritizedMachines;

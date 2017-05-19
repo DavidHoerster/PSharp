@@ -516,16 +516,11 @@ namespace Microsoft.PSharp.TestingServices.Liveness
         bool ISchedulingStrategy.TryGetNext(out MachineInfo next, IEnumerable<MachineInfo> choices,
             MachineInfo current)
         {
-            var availableMachines = choices.Where(
-                m => m.IsEnabled && !m.IsWaitingToReceive).ToList();
+            var availableMachines = choices.Where(m => m.IsEnabled).ToList();
             if (availableMachines.Count == 0)
             {
-                availableMachines = choices.Where(m => m.IsWaitingToReceive).ToList();
-                if (availableMachines.Count == 0)
-                {
-                    next = null;
-                    return false;
-                }
+                next = null;
+                return false;
             }
 
             if (this.Runtime.Configuration.EnableCycleReplayingStrategy)

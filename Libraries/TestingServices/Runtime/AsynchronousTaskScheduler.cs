@@ -74,9 +74,9 @@ namespace Microsoft.PSharp.TestingServices
                 // Else, the task was spawned by user-code (e.g. due to async/await). In
                 // this case, get the currently scheduled machine (this was the machine
                 // that spawned this task).
-                Machine machine = this.TaskMap[Runtime.Scheduler.ScheduledMachine.Id];
+                Machine machine = this.TaskMap[Runtime.Scheduler.ScheduledMachine.TaskId];
 
-                this.TaskMap.TryRemove(Runtime.Scheduler.ScheduledMachine.Id, out machine);
+                this.TaskMap.TryRemove(Runtime.Scheduler.ScheduledMachine.TaskId, out machine);
                 this.TaskMap.TryAdd(task.Id, machine);
 
                 // Notify the bug-finding scheduler about the new task, and then change
