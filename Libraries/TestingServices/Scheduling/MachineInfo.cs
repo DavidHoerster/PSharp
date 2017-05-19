@@ -35,22 +35,6 @@ namespace Microsoft.PSharp.TestingServices.Scheduling
         public readonly int Id;
 
         /// <summary>
-        /// List of wrapped tasks that block the machine.
-        /// </summary>
-        internal List<MachineInfo> BlockingWrappedTasks;
-
-        /// <summary>
-        /// List of tasks that block the machine.
-        /// </summary>
-        internal List<Task> BlockingUnwrappedTasks;
-
-        /// <summary>
-        /// True if the machine should wait all blocking
-        /// tasks to complete, before unblocking.
-        /// </summary>
-        internal bool WaitAll;
-
-        /// <summary>
         /// Is machine enabled.
         /// </summary>
         public bool IsEnabled
@@ -108,10 +92,6 @@ namespace Microsoft.PSharp.TestingServices.Scheduling
             this.IsActive = false;
             this.HasStarted = false;
             this.IsCompleted = false;
-
-            this.BlockingWrappedTasks = new List<MachineInfo>();
-            this.BlockingUnwrappedTasks = new List<Task>();
-            this.WaitAll = false;
         }
 
         #endregion
