@@ -382,7 +382,6 @@ namespace Microsoft.PSharp.TestingServices
             task.Start();
 
             this.Scheduler.WaitForTaskToStart(task.Id);
-            this.Scheduler.Schedule();
         }
 
         /// <summary>
@@ -400,6 +399,8 @@ namespace Microsoft.PSharp.TestingServices
         /// <returns>MachineId</returns>
         internal override MachineId CreateMachine(Type type, string friendlyName, Event e, Machine creator)
         {
+            this.Scheduler.Schedule();
+
             creator?.AssertNoPendingRGP("CreateMachine");
 
             Machine machine = this.CreateMachine(type, friendlyName);
@@ -416,7 +417,6 @@ namespace Microsoft.PSharp.TestingServices
             }
 
             this.RunMachineEventHandler(machine, e, true, false);
-            this.Scheduler.Schedule();
 
             return machine.Id;
         }
@@ -433,6 +433,8 @@ namespace Microsoft.PSharp.TestingServices
         /// <returns>MachineId</returns>
         internal override async Task<MachineId> CreateMachineAndExecute(Type type, string friendlyName, Event e, Machine creator)
         {
+            this.Scheduler.Schedule();
+
             creator?.AssertNoPendingRGP("CreateMachine");
 
             Machine machine = this.CreateMachine(type, friendlyName);
@@ -449,7 +451,6 @@ namespace Microsoft.PSharp.TestingServices
             }
 
             this.RunMachineEventHandler(machine, e, true, true);
-            this.Scheduler.Schedule();
 
             return await Task.FromResult(machine.Id);
         }
@@ -510,6 +511,8 @@ namespace Microsoft.PSharp.TestingServices
         /// <param name="isStarter">Is starting a new operation</param>
         internal override void SendEvent(MachineId mid, Event e, AbstractMachine sender, bool isStarter)
         {
+            this.Scheduler.Schedule();
+
             Machine machine = null;
             if (!this.MachineMap.TryGetValue(mid.Value, out machine))
             {
@@ -531,8 +534,6 @@ namespace Microsoft.PSharp.TestingServices
             {
                 this.RunMachineEventHandler(machine, null, false, false);
             }
-
-            this.Scheduler.Schedule();
         }
 
         /// <summary>
@@ -545,6 +546,8 @@ namespace Microsoft.PSharp.TestingServices
         /// <param name="isStarter">Is starting a new operation</param>
         internal override async Task SendEventAndExecute(MachineId mid, Event e, AbstractMachine sender, bool isStarter)
         {
+            this.Scheduler.Schedule();
+
             Machine machine = null;
             if (!this.MachineMap.TryGetValue(mid.Value, out machine))
             {
@@ -566,8 +569,6 @@ namespace Microsoft.PSharp.TestingServices
             {
                 this.RunMachineEventHandler(machine, null, false, true);
             }
-
-            this.Scheduler.Schedule();
 
             await Task.CompletedTask;
         }
