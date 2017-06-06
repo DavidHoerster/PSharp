@@ -81,7 +81,6 @@ namespace Microsoft.PSharp.TestingServices
 
                 // Notify the bug-finding scheduler about the new task, and then change
                 // the task previously associated with the machine, to the new task.
-                this.Runtime.Scheduler.NotifyNewTaskCreated(task.Id, machine);
                 this.Runtime.Scheduler.NotifyScheduledMachineTaskChanged(task.Id);
 
                 // Execute the new task.

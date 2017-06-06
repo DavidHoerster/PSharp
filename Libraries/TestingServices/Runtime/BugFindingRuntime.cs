@@ -361,11 +361,11 @@ namespace Microsoft.PSharp.TestingServices
             {
                 try
                 {
-                    this.Scheduler.NotifyTaskStarted();
+                    this.Scheduler.NotifyEventHandlerStarted(harness.Id);
 
                     harness.Run();
 
-                    this.Scheduler.NotifyTaskCompleted();
+                    this.Scheduler.NotifyEventHandlerCompleted(harness.Id);
                 }
                 catch (ExecutionCanceledException)
                 {
@@ -377,11 +377,11 @@ namespace Microsoft.PSharp.TestingServices
                 }
             });
 
-            this.Scheduler.NotifyNewTaskCreated(task.Id, harness);
+            this.Scheduler.NotifyEventHandlerCreated(harness);
 
             task.Start();
 
-            this.Scheduler.WaitForTaskToStart(task.Id);
+            this.Scheduler.WaitForEventHandlerToStart(harness.Id);
         }
 
         /// <summary>
@@ -658,7 +658,7 @@ namespace Microsoft.PSharp.TestingServices
             {
                 try
                 {
-                    this.Scheduler.NotifyTaskStarted();
+                    this.Scheduler.NotifyEventHandlerStarted(machine.Id);
 
                     machine.IsInsideSynchronousCall = executeSynchronously;
 
@@ -675,7 +675,7 @@ namespace Microsoft.PSharp.TestingServices
                         await machine.RunEventHandler();
                     }
 
-                    this.Scheduler.NotifyTaskCompleted();
+                    this.Scheduler.NotifyEventHandlerCompleted(machine.Id);
                 }
                 catch (ExecutionCanceledException)
                 {
@@ -689,11 +689,11 @@ namespace Microsoft.PSharp.TestingServices
 
             this.TaskMap.TryAdd(task.Id, machine);
 
-            this.Scheduler.NotifyNewTaskCreated(task.Id, machine);
+            this.Scheduler.NotifyEventHandlerCreated(machine);
 
             task.Start(this.TaskScheduler);
 
-            this.Scheduler.WaitForTaskToStart(task.Id);
+            this.Scheduler.WaitForEventHandlerToStart(machine.Id);
         }
 
         #endregion
@@ -1122,7 +1122,7 @@ namespace Microsoft.PSharp.TestingServices
 
             this.Log($"<ReceiveLog> Machine '{machine.Id}' is waiting on events:{events}.");
 
-            this.Scheduler.NotifyTaskBlockedOnEvent(Task.CurrentId.Value);
+            this.Scheduler.NotifyTaskBlockedOnEvent(machine.Id);
             this.Scheduler.Schedule();
         }
 
@@ -1146,7 +1146,7 @@ namespace Microsoft.PSharp.TestingServices
                     $"event '{eventInfo.EventName}' and unblocked.");
             }
 
-            this.Scheduler.NotifyTaskReceivedEvent(machine);
+            this.Scheduler.NotifyMachineReceivedEvent(machine.Id);
             machine.IsWaitingToReceive = false;
         }
 

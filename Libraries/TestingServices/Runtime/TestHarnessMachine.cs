@@ -84,6 +84,11 @@ namespace Microsoft.PSharp.TestingServices
         /// <param name="ex">Exception</param>
         internal void ReportUnhandledException(Exception ex)
         {
+            if (ex is TargetInvocationException)
+            {
+                ex = ex.InnerException;
+            }
+
             if (this.TestAction != null)
             {
                 base.Runtime.WrapAndThrowException(ex, $"Exception '{ex.GetType()}' was thrown " +

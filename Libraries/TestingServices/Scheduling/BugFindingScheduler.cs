@@ -12,7 +12,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -39,30 +38,9 @@ namespace Microsoft.PSharp.TestingServices.Scheduling
         private ISchedulingStrategy Strategy;
 
         /// <summary>
-        /// List of machine infos.
+        /// Map of unique machine ids to machine infos.
         /// </summary>
-        private List<MachineInfo> MachineInfos;
-
-        /// <summary>
-        /// Dictionary from task ids to machine infos.
-        /// 
-        /// Note that it is safe to use the task id (which normally is not
-        /// guaranteed to be unique) as a key during serialized bug-finding
-        /// for the following reasons:
-        /// 
-        /// 1) Task ids monotonically increase and will wrap around only
-        /// after they reach <see cref="int.MaxValue"/>.
-        /// 2) Whenever a task completes, we remove it from this dictionary.
-        /// 3) At each time, due to the way we serialize execution, we
-        /// guarantee that there is only a single task corresponding to a
-        /// single machine in the dictionary.
-        /// 
-        /// Thus, to encounter erroneous dictionary conflicts, we need to
-        /// have <see cref="int.MaxValue"/> tasks (or machines) alive at
-        /// the same point during the same testing iteration, which is a
-        /// highly unlikely scenario.
-        /// </summary>
-        private ConcurrentDictionary<int, MachineInfo> TaskMap;
+        private Dictionary<ulong, MachineInfo> MachineInfos;
         
         /// <summary>
         /// The scheduler completion source.
@@ -116,8 +94,7 @@ namespace Microsoft.PSharp.TestingServices.Scheduling
         {
             this.Runtime = runtime;
             this.Strategy = strategy;
-            this.MachineInfos = new List<MachineInfo>();
-            this.TaskMap = new ConcurrentDictionary<int, MachineInfo>();
+            this.MachineInfos = new Dictionary<ulong, MachineInfo>();
             this.CompletionSource = new TaskCompletionSource<bool>();
             this.IsSchedulerRunning = true;
             this.BugFound = false;
@@ -133,14 +110,7 @@ namespace Microsoft.PSharp.TestingServices.Scheduling
         /// </summary>
         internal void Schedule()
         {
-            int? taskId = Task.CurrentId;
-
-            // If the caller is the root task, then return.
-            if (taskId != null && taskId == this.Runtime.RootTaskId)
-            {
-                return;
-            }
-
+            // If the scheduler is not running, then return.
             if (!this.IsSchedulerRunning)
             {
                 this.Stop();
@@ -152,13 +122,13 @@ namespace Microsoft.PSharp.TestingServices.Scheduling
             // Checks if the scheduling steps bound has been reached.
             this.CheckIfSchedulingStepsBoundIsReached();
 
-            MachineInfo machineInfo = this.TaskMap[(int)taskId];
+            MachineInfo current = this.ScheduledMachine;
             MachineInfo next = null;
 
-            var choices = this.TaskMap.Values.OrderBy(mi => mi.Machine.Id.Value);
-            if (!this.Strategy.TryGetNext(out next, choices, machineInfo))
+            var choices = this.MachineInfos.Values.OrderBy(mi => mi.Machine.Id.Value);
+            if (!this.Strategy.TryGetNext(out next, choices, current))
             {
-                foreach (var m in this.MachineInfos)
+                foreach (var m in this.MachineInfos.Values)
                 {
                     if (m.IsWaitingToReceive)
                     {
@@ -191,32 +161,32 @@ namespace Microsoft.PSharp.TestingServices.Scheduling
             Debug.WriteLine($"<ScheduleDebug> Schedule task '{next.TaskId}' of machine " +
                 $"'{next.Machine.Id}'.");
 
-            if (machineInfo != next)
+            if (current != next)
             {
-                machineInfo.IsActive = false;
+                current.IsActive = false;
                 lock (next)
                 {
                     next.IsActive = true;
                     System.Threading.Monitor.PulseAll(next);
                 }
                 
-                lock (machineInfo)
+                lock (current)
                 {
-                    if (machineInfo.IsCompleted)
+                    if (current.IsCompleted)
                     {
                         return;
                     }
 
-                    while (!machineInfo.IsActive)
+                    while (!current.IsActive)
                     {
-                        Debug.WriteLine($"<ScheduleDebug> Sleep task '{machineInfo.TaskId}' of machine " +
-                            $"'{machineInfo.Machine.Id}'.");
-                        System.Threading.Monitor.Wait(machineInfo);
-                        Debug.WriteLine($"<ScheduleDebug> Wake up task '{machineInfo.TaskId}' of machine " +
-                            $"'{machineInfo.Machine.Id}'.");
+                        Debug.WriteLine($"<ScheduleDebug> Sleep task '{current.TaskId}' of machine " +
+                            $"'{current.Machine.Id}'.");
+                        System.Threading.Monitor.Wait(current);
+                        Debug.WriteLine($"<ScheduleDebug> Wake up task '{current.TaskId}' of machine " +
+                            $"'{current.Machine.Id}'.");
                     }
 
-                    if (!machineInfo.IsEnabled)
+                    if (!current.IsEnabled)
                     {
                         throw new ExecutionCanceledException();
                     }
@@ -255,7 +225,7 @@ namespace Microsoft.PSharp.TestingServices.Scheduling
                 this.Runtime.ScheduleTrace.AddFairNondeterministicBooleanChoice(uniqueId, choice);
             }
 
-            foreach(var m in this.MachineInfos)
+            foreach(var m in this.MachineInfos.Values)
             {
                 if (m.IsActive)
                 {
@@ -311,12 +281,12 @@ namespace Microsoft.PSharp.TestingServices.Scheduling
         }
 
         /// <summary>
-        /// Wait for the task to start.
+        /// Wait for the event handler to start.
         /// </summary>
-        /// <param name="taskId">TaskId</param>
-        internal void WaitForTaskToStart(int taskId)
+        /// <param name="id">MachineId</param>
+        internal void WaitForEventHandlerToStart(MachineId id)
         {
-            var machineInfo = this.TaskMap[taskId];
+            var machineInfo = this.MachineInfos[id.Value];
             lock (machineInfo)
             {
                 if (this.MachineInfos.Count == 1)
@@ -335,32 +305,41 @@ namespace Microsoft.PSharp.TestingServices.Scheduling
         }
 
         /// <summary>
-        /// Notify that a new task has been created for the given machine.
+        /// Notify that an event handler has been created for the given machine.
         /// </summary>
-        /// <param name="taskId">TaskId</param>
         /// <param name="machine">Machine</param>
-        internal void NotifyNewTaskCreated(int taskId, AbstractMachine machine)
+        internal void NotifyEventHandlerCreated(AbstractMachine machine)
         {
-            var machineInfo = new MachineInfo(this.MachineInfos.Count, taskId, machine);
+            if (this.MachineInfos.ContainsKey(machine.Id.Value))
+            {
+                var machineInfo = this.MachineInfos[machine.Id.Value];
+                Debug.WriteLine($"<ScheduleDebug> Reusing machine info '{machineInfo.Id}' for machine " +
+                    $"'{machineInfo.Machine.Id}'.");
+                machineInfo.IsEnabled = true;
+                machineInfo.IsCompleted = false;
+            }
+            else
+            {
+                var machineInfo = new MachineInfo(this.MachineInfos.Count, machine);
+                Debug.WriteLine($"<ScheduleDebug> Created machine info '{machineInfo.Id}' for machine " +
+                    $"'{machineInfo.Machine.Id}'.");
 
-            Debug.WriteLine($"<ScheduleDebug> Created task '{machineInfo.TaskId}' for machine " +
-                $"'{machineInfo.Machine.Id}'.");
-            this.MachineInfos.Add(machineInfo);
-            this.TaskMap.TryAdd(taskId, machineInfo);
+                if (this.MachineInfos.Count == 0)
+                {
+                    this.ScheduledMachine = machineInfo;
+                }
+
+                this.MachineInfos.Add(machine.Id.Value, machineInfo);
+            }
         }
 
         /// <summary>
-        /// Notify that the task has started.
+        /// Notify that the event handler has started.
         /// </summary>
-        internal void NotifyTaskStarted()
+        /// <param name="id">MachineId</param>
+        internal void NotifyEventHandlerStarted(MachineId id)
         {
-            int? id = Task.CurrentId;
-            if (id == null)
-            {
-                return;
-            }
-
-            var machineInfo = this.TaskMap[(int)id];
+            var machineInfo = this.MachineInfos[id.Value];
 
             Debug.WriteLine($"<ScheduleDebug> Started task '{machineInfo.TaskId}' of machine " +
                 $"'{machineInfo.Machine.Id}'.");
@@ -383,15 +362,17 @@ namespace Microsoft.PSharp.TestingServices.Scheduling
                     throw new ExecutionCanceledException();
                 }
             }
+
+            machineInfo.TaskId = Task.CurrentId.Value;
         }
 
         /// <summary>
-        /// Notify that the task is waiting to receive an event.
+        /// Notify that the machine is waiting to receive an event.
         /// </summary>
-        /// <param name="id">TaskId</param>
-        internal void NotifyTaskBlockedOnEvent(int? id)
+        /// <param name="id">MachineId</param>
+        internal void NotifyTaskBlockedOnEvent(MachineId id)
         {
-            var machineInfo = this.TaskMap[(int)id];
+            var machineInfo = this.MachineInfos[id.Value];
             machineInfo.IsEnabled = false;
             machineInfo.IsWaitingToReceive = true;
 
@@ -402,10 +383,10 @@ namespace Microsoft.PSharp.TestingServices.Scheduling
         /// <summary>
         /// Notify that the machine received an event that it was waiting for.
         /// </summary>
-        /// <param name="machine">Machine</param>
-        internal void NotifyTaskReceivedEvent(AbstractMachine machine)
+        /// <param name="id">MachineId</param>
+        internal void NotifyMachineReceivedEvent(MachineId id)
         {
-            var machineInfo = this.MachineInfos[(int)machine.Id.Value];
+            var machineInfo = this.MachineInfos[id.Value];
             machineInfo.IsEnabled = true;
             machineInfo.IsWaitingToReceive = false;
             Debug.WriteLine($"<ScheduleDebug> Task '{machineInfo.TaskId}' of machine " +
@@ -413,37 +394,25 @@ namespace Microsoft.PSharp.TestingServices.Scheduling
         }
 
         /// <summary>
-        /// Notify that the task of the scheduled machine changed.
+        /// Notify that the task executing the scheduled machine changed.
         /// This can occur if a machine is using async/await.
         /// </summary>
         /// <param name="taskId">Task id</param>
         internal void NotifyScheduledMachineTaskChanged(int taskId)
         {
-            MachineInfo parentInfo = this.ScheduledMachine;
-
-            Debug.WriteLine($"<ScheduleDebug> Task '{parentInfo.TaskId}' changed to {taskId}.");
-
-            parentInfo.IsEnabled = false;
-            parentInfo.IsCompleted = true;
-
-            this.TaskMap.TryRemove(parentInfo.TaskId, out parentInfo);
-
-            this.ScheduledMachine = this.TaskMap[taskId];
-            this.ScheduledMachine.HasStarted = true;
+            MachineInfo machineInfo = this.ScheduledMachine;
+            Debug.WriteLine($"<ScheduleDebug> Task '{machineInfo.TaskId}' of machine " +
+                $"'{machineInfo.Machine.Id}' changed to {taskId}.");
+            machineInfo.TaskId = taskId;
         }
 
         /// <summary>
-        /// Notify that the task has completed.
+        /// Notify that the event handler has completed.
         /// </summary>
-        internal void NotifyTaskCompleted()
+        /// <param name="id">MachineId</param>
+        internal void NotifyEventHandlerCompleted(MachineId id)
         {
-            int? id = Task.CurrentId;
-            if (id == null)
-            {
-                return;
-            }
-
-            var machineInfo = this.TaskMap[(int)id];
+            var machineInfo = this.MachineInfos[id.Value];
 
             Debug.WriteLine($"<ScheduleDebug> Completed task '{machineInfo.TaskId}' of machine " +
                 $"'{machineInfo.Machine.Id}'.");
@@ -455,8 +424,6 @@ namespace Microsoft.PSharp.TestingServices.Scheduling
 
             Debug.WriteLine($"<ScheduleDebug> Exit task '{machineInfo.TaskId}' of machine " +
                 $"'{machineInfo.Machine.Id}'.");
-
-            this.TaskMap.TryRemove((int)id, out machineInfo);
         }
 
         /// <summary>
@@ -546,7 +513,7 @@ namespace Microsoft.PSharp.TestingServices.Scheduling
         internal HashSet<MachineId> GetEnabledMachines()
         {
             var enabledMachines = new HashSet<MachineId>();
-            foreach (var machineInfo in this.MachineInfos)
+            foreach (var machineInfo in this.MachineInfos.Values)
             {
                 if (machineInfo.IsEnabled)
                 {
@@ -633,7 +600,7 @@ namespace Microsoft.PSharp.TestingServices.Scheduling
                 this.NotifyAssertionFailure(message, true);
             }
 
-            if (!this.TaskMap.ContainsKey((int)taskId))
+            if (!this.MachineInfos.Values.Any(mi => mi.TaskId == taskId))
             {
                 string message = IO.Utilities.Format($"Detected task with id '{taskId}' " +
                     "that is not controlled by the P# runtime.");
@@ -670,7 +637,7 @@ namespace Microsoft.PSharp.TestingServices.Scheduling
         /// </summary>
         private void KillRemainingMachines()
         {
-            foreach (var machineInfo in this.MachineInfos)
+            foreach (var machineInfo in this.MachineInfos.Values)
             {
                 machineInfo.IsActive = true;
                 machineInfo.IsEnabled = false;

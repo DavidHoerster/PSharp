@@ -34,71 +34,47 @@ namespace Microsoft.PSharp.TestingServices.Scheduling
         /// <summary>
         /// Task id of the machine.
         /// </summary>
-        public readonly int TaskId;
+        internal int TaskId { get; set; }
 
         /// <summary>
         /// Is machine enabled.
         /// </summary>
-        public bool IsEnabled
-        {
-            get; internal set;
-        }
+        public bool IsEnabled { get; internal set; }
 
         /// <summary>
         /// Is machine waiting to receive an event.
         /// </summary>
-        public bool IsWaitingToReceive
-        {
-            get; internal set;
-        }
+        public bool IsWaitingToReceive { get; internal set; }
 
         /// <summary>
         /// Is machine active.
         /// </summary>
-        public bool IsActive
-        {
-            get; internal set;
-        }
+        public bool IsActive { get; internal set; }
 
         /// <summary>
         /// Has the machine started.
         /// </summary>
-        public bool HasStarted
-        {
-            get; internal set;
-        }
+        public bool HasStarted { get; internal set; }
 
         /// <summary>
         /// Is machine completed.
         /// </summary>
-        public bool IsCompleted
-        {
-            get; internal set;
-        }
+        public bool IsCompleted { get; internal set; }
 
         /// <summary>
         /// Type of the next operation of the machine.
         /// </summary>
-        public OperationType NextOperationType
-        {
-            get; internal set;
-        }
+        public OperationType NextOperationType { get; internal set; }
 
         /// <summary>
         /// Target id of the next operation of the machine.
         /// </summary>
-        public int NextTargetId
-        {
-            get; internal set;
-        }
+        public int NextTargetId { get; internal set; }
 
         /// <summary>
         /// Monotonically increasing operation count.
         /// </summary>
-        public int OperationCount
-        {
-            get; internal set;
-        }
+        public int OperationCount { get; internal set; }
 
         #endregion
 
@@ -108,12 +84,10 @@ namespace Microsoft.PSharp.TestingServices.Scheduling
         /// Constructor.
         /// </summary>
         /// <param name="id">Unique id</param>
-        /// <param name="taskId">TaskId</param>
         /// <param name="machine">Machine</param>
-        internal MachineInfo(int id, int taskId, AbstractMachine machine)
+        internal MachineInfo(int id, AbstractMachine machine)
         {
             this.Id = id;
-            this.TaskId = taskId;
             this.Machine = machine;
             this.IsEnabled = true;
             this.IsWaitingToReceive = false;
