@@ -26,24 +26,16 @@ namespace Microsoft.PSharp.TestingServices.Scheduling.POR
         {
             List<TidEntry> list = new List<TidEntry>();
 
-            int i = prevThreadIndex;
-            int threadCount = machines.Count;
-            for (int count = 0; count < threadCount; ++count)
+            foreach (var machineInfo in machines)
             {
-                MachineInfo machineInfo = machines[i];
                 list.Add(
                     new TidEntry(
                         machineInfo.Id,
-                        machineInfo.IsEnabled, 
-                        machineInfo.NextOperationType, 
+                        machineInfo.IsEnabled,
+                        machineInfo.NextOperationType,
                         machineInfo.NextTargetId));
-                ++i;
-                if (i >= threadCount)
-                {
-                    i = 0;
-                }
             }
-
+            
             if (nextStackPos > StackInternal.Count)
             {
                 throw new RuntimeException("DFS strategy unexpected stack state.");
@@ -110,12 +102,12 @@ namespace Microsoft.PSharp.TestingServices.Scheduling.POR
         /// suitable thread entry from the real top of the stack.
         /// </summary>
         /// <returns></returns>
-        public int GetSelectedOrFirstEnabledNotSlept()
+        public int GetSelectedOrFirstBacktrackNotSlept(int startingFrom)
         {
             var top = GetTop();
 
             return StackInternal.Count == nextStackPos
-                ? top.GetFirstTidNotSlept()
+                ? top.GetFirstBacktrackNotSlept(startingFrom)
                 : top.GetSelected();
         }
 
@@ -135,14 +127,14 @@ namespace Microsoft.PSharp.TestingServices.Scheduling.POR
             }
             
 
-            // Pop until there are some tid entries that are not slept OR stack is empty.
+            // Pop until there are some tid entries that are not done/slept OR stack is empty.
             while (StackInternal.Count > 0)
             {
                 TidEntryList top = GetTopAsRealTop();
                 top.SetSelectedToSleep();
                 top.ClearSelected();
 
-                if (!top.AllSlept())
+                if (!top.AllDoneOrSlept())
                 {
                     break;
                 }

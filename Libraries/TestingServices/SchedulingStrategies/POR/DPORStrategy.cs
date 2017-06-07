@@ -126,7 +126,7 @@ namespace Microsoft.PSharp.TestingServices.Scheduling.POR
 
             }
 
-            int nextTidIndex = stack.GetSelectedOrFirstEnabledNotSlept();
+            int nextTidIndex = stack.GetSelectedOrFirstBacktrackNotSlept(current.Id);
 
             if (nextTidIndex < 0)
             {

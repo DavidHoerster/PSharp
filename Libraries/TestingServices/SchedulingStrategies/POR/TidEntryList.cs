@@ -25,14 +25,21 @@ namespace Microsoft.PSharp.TestingServices.Scheduling.POR
         /// 
         /// </summary>
         /// <returns></returns>
-        public int GetFirstTidNotSlept()
+        public int GetFirstBacktrackNotSlept(int startingFrom)
         {
-            for (int i=0; i < List.Count; ++i)
+            int size = List.Count;
+            int i = startingFrom;
+            for (int count = 0; count < size; ++count)
             {
-                if (List[i].Enabled &&
+                if (List[i].Backtrack &&
                     !List[i].Sleep)
                 {
                     return i;
+                }
+                ++i;
+                if (i >= size)
+                {
+                    i = 0;
                 }
             }
 
@@ -51,9 +58,9 @@ namespace Microsoft.PSharp.TestingServices.Scheduling.POR
         /// 
         /// </summary>
         /// <returns></returns>
-        public bool AllSlept()
+        public bool AllDoneOrSlept()
         {
-            return GetFirstTidNotSlept() < 0;
+            return GetFirstBacktrackNotSlept(0) < 0;
         }
 
         /// <summary>

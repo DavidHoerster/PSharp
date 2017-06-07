@@ -9,22 +9,6 @@ namespace Microsoft.PSharp.TestingServices.Scheduling.POR
     public class TidEntry
     {
         /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="id"></param>
-        /// <param name="enabled"></param>
-        /// <param name="opType"></param>
-        /// <param name="targetId"></param>
-        public TidEntry(int id, bool enabled, OperationType opType, int targetId)
-        {
-            Id = id;
-            Enabled = enabled;
-            OpType = opType;
-            TargetId = targetId;
-        }
-
-
-        /// <summary>
         /// The id/index of this thread in the original thread creation order list of threads.
         /// </summary>
         public int Id;
@@ -45,6 +29,11 @@ namespace Microsoft.PSharp.TestingServices.Scheduling.POR
         public bool Sleep;
 
         /// <summary>
+        /// Backtrack to this transition?
+        /// </summary>
+        public bool Backtrack;
+
+        /// <summary>
         /// Operation type.
         /// </summary>
         public OperationType OpType;
@@ -54,6 +43,24 @@ namespace Microsoft.PSharp.TestingServices.Scheduling.POR
         /// </summary>
         public int TargetId;
 
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="id"></param>
+        /// <param name="enabled"></param>
+        /// <param name="opType"></param>
+        /// <param name="targetId"></param>
+        public TidEntry(int id, bool enabled, OperationType opType, int targetId)
+        {
+            Id = id;
+            Enabled = enabled;
+            Selected = false;
+            Sleep = false;
+            Backtrack = false;
+            OpType = opType;
+            TargetId = targetId;
+        }
 
         /// <summary>
         /// 
