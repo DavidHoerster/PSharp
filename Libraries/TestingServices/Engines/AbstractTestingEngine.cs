@@ -22,6 +22,7 @@ using System.Threading.Tasks;
 
 using Microsoft.PSharp.IO;
 using Microsoft.PSharp.TestingServices.Scheduling;
+using Microsoft.PSharp.TestingServices.Scheduling.POR;
 using Microsoft.PSharp.TestingServices.Tracing.Schedule;
 using Microsoft.PSharp.Utilities;
 
@@ -332,6 +333,11 @@ namespace Microsoft.PSharp.TestingServices
                 this.Strategy = new MaceMCStrategy(this.Configuration);
                 this.Configuration.PerformFullExploration = false;
                 this.Configuration.CacheProgramState = false;
+            }
+            else if (this.Configuration.SchedulingStrategy == SchedulingStrategy.DPOR)
+            {
+                this.Strategy = new DPORStrategy();
+                this.Configuration.PerformFullExploration = false;
             }
             else if (this.Configuration.SchedulingStrategy == SchedulingStrategy.Portfolio)
             {

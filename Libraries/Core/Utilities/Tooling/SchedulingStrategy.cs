@@ -93,6 +93,11 @@ namespace Microsoft.PSharp.Utilities
         /// potential liveness violations.
         /// </summary>
         [EnumMember(Value = "MaceMC")]
-        MaceMC
+        MaceMC,
+        /// <summary>
+        /// Dynamic partial-order reduction scheduling strategy.
+        /// </summary>
+        [EnumMember(Value = "DPOR")]
+        DPOR
     }
 }

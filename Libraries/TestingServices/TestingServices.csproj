@@ -64,6 +64,11 @@
     <Compile Include="Runtime\AsynchronousTaskScheduler.cs" />
     <Compile Include="Runtime\BugFindingRuntime.cs" />
     <Compile Include="Runtime\TestHarnessMachine.cs" />
+    <Compile Include="SchedulingStrategies\POR\DPORStrategy.cs" />
+    <Compile Include="SchedulingStrategies\POR\Stack.cs" />
+    <Compile Include="SchedulingStrategies\POR\TidEntry.cs" />
+    <Compile Include="SchedulingStrategies\POR\TidEntryList.cs" />
+    <Compile Include="SchedulingStrategies\POR\VC.cs" />
     <Compile Include="Scheduling\BugFindingScheduler.cs" />
     <Compile Include="Scheduling\MachineInfo.cs" />
     <Compile Include="SchedulingStrategies\DelayBounded\DelayBoundingStrategy.cs" />
