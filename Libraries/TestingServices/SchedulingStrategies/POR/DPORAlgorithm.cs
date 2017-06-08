@@ -6,7 +6,7 @@ namespace Microsoft.PSharp.TestingServices.Scheduling.POR
     /// <summary>
     /// 
     /// </summary>
-    public class DPORUtil
+    public class DPORAlgorithm
     {
         private uint numThreads;
         private uint numSteps;
@@ -20,7 +20,7 @@ namespace Microsoft.PSharp.TestingServices.Scheduling.POR
         /// <summary>
         /// 
         /// </summary>
-        public DPORUtil()
+        public DPORAlgorithm()
         {
             // inital estimates
 
@@ -148,19 +148,20 @@ namespace Microsoft.PSharp.TestingServices.Scheduling.POR
                 HB(stack, lastAccessIndex, i) ||
                 !Reversible(stack, lastAccessIndex, i)) return;
 
+            // Find candidates:
             // Race between `a` and `b`.
             // Must find first steps after `a` that do not HA `a`
-            // (except maybe b) and do not HA each other.
+            // (except maybe b.tid) and do not HA each other.
             // candidates = {}
             // if b.tid is enabled before a:
             //   add b.tid to candidates
-            // notYetFound = set of enabled threads before a - a.tid - b.tid.
+            // lookingFor = set of enabled threads before a - a.tid - b.tid.
             // let vc = [0,0,...]
             // vc[a.tid] = a;
             // for k = aIndex+1 to bIndex:
-            //   if notYetFound does not contain k.tid:
+            //   if lookingFor does not contain k.tid:
             //     continue
-            //   remove k.tid from notYetFound
+            //   remove k.tid from lookingFor
             //   doesHaAnother = false
             //   foreach t in tids:
             //     if vc[t] hb k:
@@ -169,8 +170,8 @@ namespace Microsoft.PSharp.TestingServices.Scheduling.POR
             //   vc[k.tid] = k
             //   if !doesHaAnother:
             //     add k.tid to candidates
-            //       
-            //   vc = vc n k.vc
+            //   if lookingFor is empty:
+            //     break
 
 
             var candidateThreadIds = new HashSet<uint>();
@@ -180,14 +181,14 @@ namespace Microsoft.PSharp.TestingServices.Scheduling.POR
             {
                 candidateThreadIds.Add((uint) step.Id);
             }
-            var notYetFound = new HashSet<uint>();
+            var lookingFor = new HashSet<uint>();
             for (uint j = 0; j < beforeA.List.Count; ++j)
             {
                 if (j != a.Id &&
                     j != step.Id &&
                     beforeA.List[(int) j].Enabled)
                 {
-                    notYetFound.Add(j);
+                    lookingFor.Add(j);
                 }
             }
 
@@ -196,9 +197,9 @@ namespace Microsoft.PSharp.TestingServices.Scheduling.POR
             for (uint k = lastAccessIndex + 1; k < i; ++k)
             {
                 var kEntry = GetSelectedTidEntry(stack, k);
-                if (!notYetFound.Contains((uint) kEntry.Id)) continue;
+                if (!lookingFor.Contains((uint) kEntry.Id)) continue;
 
-                notYetFound.Remove((uint) kEntry.Id);
+                lookingFor.Remove((uint) kEntry.Id);
                 bool doesHaAnother = false;
                 for (int t = 0; t < numThreads; ++t)
                 {
@@ -213,11 +214,70 @@ namespace Microsoft.PSharp.TestingServices.Scheduling.POR
                 {
                     candidateThreadIds.Add((uint) kEntry.Id);
                 }
-                if (notYetFound.Count == 0)
+                if (lookingFor.Count == 0)
                 {
                     break;
                 }
             }
+
+            // Make sure at least one candidate is backtracked
+
+            if (candidateThreadIds.Count == 0)
+            {
+                throw new SchedulingStrategyException("DPOR: There were no candidate backtrack points.");
+            }
+
+            // Is one already backtracked?
+            foreach (var tid in candidateThreadIds)
+            {
+                if (beforeA.List[(int) tid].Backtrack)
+                {
+                    return;
+                }
+            }
+
+            // None are backtracked, so we have to pick one.
+            // Try to pick one that is slept first.
+            // Start from thread b.tid:
+            {
+                uint sleptThread = (uint) step.Id;
+                for (uint k = 0; k < numThreads; ++k)
+                {
+                    if (candidateThreadIds.Contains(sleptThread) &&
+                        beforeA.List[(int)sleptThread].Sleep)
+                    {
+                        beforeA.List[(int)sleptThread].Backtrack = true;
+                        return;
+                    }
+                    ++sleptThread;
+                    if (sleptThread >= numThreads)
+                    {
+                        sleptThread = 0;
+                    }
+                }
+            }
+
+            // None are slept. So just pick one.
+            // Start from thread b.tid:
+            {
+                uint backtrackThread = (uint)step.Id;
+                for (uint k = 0; k < numThreads; ++k)
+                {
+                    if (candidateThreadIds.Contains(backtrackThread))
+                    {
+                        beforeA.List[(int)backtrackThread].Backtrack = true;
+                        return;
+                    }
+                    ++backtrackThread;
+                    if (backtrackThread >= numThreads)
+                    {
+                        backtrackThread = 0;
+                    }
+                }
+            }
+
+            throw new SchedulingStrategyException("DPOR: Did not manage to add backtrack point.");
+
         }
 
         /// <summary>

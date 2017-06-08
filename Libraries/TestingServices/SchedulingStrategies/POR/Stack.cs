@@ -38,7 +38,7 @@ namespace Microsoft.PSharp.TestingServices.Scheduling.POR
             
             if (nextStackPos > StackInternal.Count)
             {
-                throw new RuntimeException("DFS strategy unexpected stack state.");
+                throw new SchedulingStrategyException("DFS strategy unexpected stack state.");
             }
 
             bool added = nextStackPos == StackInternal.Count;
@@ -91,7 +91,7 @@ namespace Microsoft.PSharp.TestingServices.Scheduling.POR
         {
             if (nextStackPos != StackInternal.Count)
             {
-                throw new RuntimeException("DFS Strategy: top of stack is not aligned.");
+                throw new SchedulingStrategyException("DFS Strategy: top of stack is not aligned.");
             }
             return GetTop();
         }
@@ -149,7 +149,7 @@ namespace Microsoft.PSharp.TestingServices.Scheduling.POR
         {
             if (nextStackPos != StackInternal.Count)
             {
-                throw new RuntimeException("DFS Strategy: top of stack is not aligned.");
+                throw new SchedulingStrategyException("DFS Strategy: top of stack is not aligned.");
             }
             StackInternal.RemoveAt(StackInternal.Count - 1);
             --nextStackPos;
@@ -159,9 +159,17 @@ namespace Microsoft.PSharp.TestingServices.Scheduling.POR
         {
             if (!StackInternal[nextStackPos].List.SequenceEqual(list, TidEntry.ComparerSingleton))
             {
-                throw new RuntimeException("DFS strategy detected nondeterminism.");
+                throw new SchedulingStrategyException("DFS strategy detected nondeterminism.");
             }
 
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public void Clear()
+        {
+            StackInternal.Clear();
         }
     }
 }

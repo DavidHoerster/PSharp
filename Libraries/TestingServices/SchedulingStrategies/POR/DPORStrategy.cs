@@ -9,14 +9,19 @@ namespace Microsoft.PSharp.TestingServices.Scheduling.POR
     /// </summary>
     public class DPORStrategy : ISchedulingStrategy
     {
-        private Stack stack;
+        private readonly Stack Stack;
+        private readonly DPORAlgorithm Dpor;
+        private readonly bool SleepSets;
 
 
         /// <summary>
         /// Dynamic partial-order reduction strategy.
         /// </summary>
-        public DPORStrategy()
+        public DPORStrategy(bool dpor, bool sleepSets)
         {
+            Stack = new Stack();
+            Dpor = dpor ? new DPORAlgorithm() : null;
+            SleepSets = sleepSets;
             Reset();
         }
 
@@ -43,7 +48,7 @@ namespace Microsoft.PSharp.TestingServices.Scheduling.POR
         /// <returns>Explored steps</returns>
         public int GetExploredSteps()
         {
-            return stack.GetNumSteps();
+            return Stack.GetNumSteps();
         }
 
         /// <summary>
@@ -74,8 +79,10 @@ namespace Microsoft.PSharp.TestingServices.Scheduling.POR
         /// <returns>Boolean</returns>
         public bool HasFinished()
         {
-            stack.PrepareForNextSchedule();
-            return stack.GetInternalSize() == 0;
+            Dpor?.DoDPOR(Stack);
+
+            Stack.PrepareForNextSchedule();
+            return Stack.GetInternalSize() == 0;
         }
 
         /// <summary>
@@ -102,7 +109,7 @@ namespace Microsoft.PSharp.TestingServices.Scheduling.POR
         /// </summary>
         public void Reset()
         {
-            stack = new Stack();
+            Stack.Clear();
         }
 
         /// <summary>
@@ -116,17 +123,25 @@ namespace Microsoft.PSharp.TestingServices.Scheduling.POR
         {
             List<MachineInfo> choicesList = choices.ToList();
 
-            bool added = stack.Push(choicesList, current.Id);
+            bool added = Stack.Push(choicesList, current.Id);
 
             if (added)
             {
-                TidEntryList top = stack.GetTop();
+                TidEntryList top = Stack.GetTop();
 
-                // TODO: update sleep set.
+                if (Dpor == null)
+                {
+                    top.SetAllEnabledToBeBacktracked();
+                }
+
+                if (SleepSets)
+                {
+                    // TODO: update sleep set.
+                }
 
             }
 
-            int nextTidIndex = stack.GetSelectedOrFirstBacktrackNotSlept(current.Id);
+            int nextTidIndex = Stack.GetSelectedOrFirstBacktrackNotSlept(current.Id);
 
             if (nextTidIndex < 0)
             {
@@ -134,7 +149,7 @@ namespace Microsoft.PSharp.TestingServices.Scheduling.POR
                 return false;
             }
 
-            TidEntry nextTidEntry = stack.GetTop().List[nextTidIndex];
+            TidEntry nextTidEntry = Stack.GetTop().List[nextTidIndex];
 
             if (!nextTidEntry.Selected)
             {

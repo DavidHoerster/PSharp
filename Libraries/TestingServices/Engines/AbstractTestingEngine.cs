@@ -336,7 +336,7 @@ namespace Microsoft.PSharp.TestingServices
             }
             else if (this.Configuration.SchedulingStrategy == SchedulingStrategy.DPOR)
             {
-                this.Strategy = new DPORStrategy();
+                this.Strategy = new DPORStrategy(false, false);
                 this.Configuration.PerformFullExploration = false;
             }
             else if (this.Configuration.SchedulingStrategy == SchedulingStrategy.Portfolio)

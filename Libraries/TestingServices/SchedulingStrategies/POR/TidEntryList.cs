@@ -24,6 +24,20 @@ namespace Microsoft.PSharp.TestingServices.Scheduling.POR
         /// <summary>
         /// 
         /// </summary>
+        public void SetAllEnabledToBeBacktracked()
+        {
+            foreach (var tidEntry in List)
+            {
+                if (tidEntry.Enabled)
+                {
+                    tidEntry.Backtrack = true;
+                }
+            }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
         /// <returns></returns>
         public int GetFirstBacktrackNotSlept(int startingFrom)
         {
